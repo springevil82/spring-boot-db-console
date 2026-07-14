@@ -321,7 +321,7 @@
     currentDs: null,
     lastResult: null,
     expandedNodes: {},   // key → true
-    completionByDs: {}   // dsName -> { loaded, loading, keywords, tables, columns, qualifiedTables, qualifiedColumns }
+    completionByDs: {}   // dsName -> { loaded, loading, keywords, tables, columns, qualifiedTables, qualifiedColumns, tableColumns }
   };
 
   /* ═══════════════════════════════════════════════════════════
@@ -350,10 +350,87 @@
         tables: [],
         columns: [],
         qualifiedTables: [],
-        qualifiedColumns: []
+        qualifiedColumns: [],
+        tableColumns: {}
       };
     }
     return state.completionByDs[dsName];
+  }
+
+  function normalizeIdent(raw) {
+    if (!raw) return '';
+    return String(raw)
+            .trim()
+            .replace(/^"|"$/g, '')
+            .replace(/^`|`$/g, '')
+            .replace(/^\[|\]$/g, '')
+            .toLowerCase();
+  }
+
+  function isSqlKeyword(word) {
+    if (!word) return false;
+    var w = normalizeIdent(word);
+    return [
+      'on', 'where', 'group', 'order', 'having', 'limit', 'offset', 'join', 'left', 'right',
+      'inner', 'full', 'cross', 'union', 'and', 'or', 'when', 'then', 'else'
+    ].indexOf(w) !== -1;
+  }
+
+  function getSqlBeforeCursor(cm) {
+    var cursor = cm.getCursor();
+    return cm.getRange(CodeMirror.Pos(0, 0), cursor);
+  }
+
+  function parseAliases(sql) {
+    var aliases = {};
+    var re = /\b(?:from|join)\s+((?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[\w$]+)(?:\s*\.\s*(?:"[^"]+"|`[^`]+`|\[[^\]]+\]|[\w$]+))*)\s+(?:as\s+)?("[^"]+"|`[^`]+`|\[[^\]]+\]|[\w$]+)/gi;
+    var m;
+    while ((m = re.exec(sql)) !== null) {
+      var tableRef = (m[1] || '').replace(/\s+/g, '');
+      var alias = m[2] || '';
+      if (!tableRef || !alias || isSqlKeyword(alias)) continue;
+      aliases[normalizeIdent(alias)] = tableRef;
+    }
+    return aliases;
+  }
+
+  function getTableNameTail(tableRef) {
+    if (!tableRef) return '';
+    var parts = String(tableRef).split('.');
+    return normalizeIdent(parts[parts.length - 1]);
+  }
+
+  function getColumnsForAlias(alias, aliases, dsState) {
+    if (!alias || !aliases || !dsState) return [];
+    var aliasKey = normalizeIdent(alias);
+    var tableRef = aliases[aliasKey];
+    if (!tableRef) return [];
+
+    var tableKey = normalizeIdent(tableRef);
+    if (dsState.tableColumns[tableKey]) {
+      return dsState.tableColumns[tableKey];
+    }
+
+    var tail = getTableNameTail(tableRef);
+    return dsState.tableColumns[tail] || [];
+  }
+
+  function makeCompletionList(pool, needle) {
+    var seen = {};
+    var list = [];
+    pool.forEach(function (item) {
+      if (!item) return;
+      var key = item.toUpperCase();
+      if (seen[key]) return;
+      if (!needle || key.indexOf(needle) === 0) {
+        seen[key] = true;
+        list.push(item);
+      }
+    });
+    list.sort(function (a, b) {
+      return a.localeCompare(b);
+    });
+    return list;
   }
 
   function uniquePush(list, value, seen) {
@@ -425,11 +502,28 @@
             columnCalls.push(
               api.get('/api/datasources/' + encodeURIComponent(dsName) + '/columns?' + colParams.join('&'))
                 .then(function (cols) {
+                  var tableKey = normalizeIdent(t.name);
+                  var qualifiedTableKey = normalizeIdent((group.schema ? group.schema + '.' : '') + t.name);
+                  if (!dsState.tableColumns[tableKey]) dsState.tableColumns[tableKey] = [];
+                  if (!dsState.tableColumns[qualifiedTableKey]) dsState.tableColumns[qualifiedTableKey] = [];
+
+                  var tableColsSeen = {};
+                  dsState.tableColumns[tableKey].forEach(function (existingCol) {
+                    tableColsSeen[normalizeIdent(existingCol)] = true;
+                  });
+
                   (cols || []).forEach(function (c) {
                     uniquePush(dsState.columns, c.name, columnSeen);
                     uniquePush(dsState.qualifiedColumns, t.name + '.' + c.name, qualifiedColumnSeen);
                     if (group.schema) {
                       uniquePush(dsState.qualifiedColumns, group.schema + '.' + t.name + '.' + c.name, qualifiedColumnSeen);
+                    }
+
+                    var colName = c.name;
+                    if (!tableColsSeen[normalizeIdent(colName)]) {
+                      dsState.tableColumns[tableKey].push(colName);
+                      dsState.tableColumns[qualifiedTableKey].push(colName);
+                      tableColsSeen[normalizeIdent(colName)] = true;
                     }
                   });
                 })
@@ -469,6 +563,23 @@
     var token = cm.getTokenAt(cursor);
     var range = getWordRange(token, cursor);
     var needle = (range.word || '').toUpperCase();
+    var sqlBeforeCursor = getSqlBeforeCursor(cm);
+
+    // Alias-aware completion: after d.<Ctrl+Space> suggest columns from aliased table.
+    var aliasAccessMatch = /([A-Za-z_][\w$]*)\.([A-Za-z_][\w$]*)?$/.exec(sqlBeforeCursor);
+    if (aliasAccessMatch && dsState) {
+      var alias = aliasAccessMatch[1];
+      var memberPrefix = aliasAccessMatch[2] || '';
+      var aliases = parseAliases(sqlBeforeCursor);
+      var aliasCols = getColumnsForAlias(alias, aliases, dsState);
+      if (aliasCols.length) {
+        return {
+          list: makeCompletionList(aliasCols, memberPrefix.toUpperCase()),
+          from: CodeMirror.Pos(cursor.line, cursor.ch - memberPrefix.length),
+          to: CodeMirror.Pos(cursor.line, cursor.ch)
+        };
+      }
+    }
 
     var pool = [];
     if (dsState) {
@@ -481,21 +592,7 @@
       pool = SQL_KEYWORDS.slice();
     }
 
-    var seen = {};
-    var list = [];
-    pool.forEach(function (item) {
-      if (!item) return;
-      var key = item.toUpperCase();
-      if (seen[key]) return;
-      if (!needle || key.indexOf(needle) === 0) {
-        seen[key] = true;
-        list.push(item);
-      }
-    });
-
-    list.sort(function (a, b) {
-      return a.localeCompare(b);
-    });
+    var list = makeCompletionList(pool, needle);
 
     return {
       list: list,
