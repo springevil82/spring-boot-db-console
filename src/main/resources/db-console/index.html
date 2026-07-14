@@ -433,6 +433,262 @@
     return list;
   }
 
+  function tokenizeSql(sql) {
+    var tokens = [];
+    var i = 0;
+
+    while (i < sql.length) {
+      var ch = sql[i];
+      var next = i + 1 < sql.length ? sql[i + 1] : '';
+
+      if (/\s/.test(ch)) {
+        var wsStart = i;
+        while (i < sql.length && /\s/.test(sql[i])) i++;
+        tokens.push({type: 'ws', text: sql.slice(wsStart, i)});
+        continue;
+      }
+
+      if (ch === '-' && next === '-') {
+        var lineCommentStart = i;
+        i += 2;
+        while (i < sql.length && sql[i] !== '\n') i++;
+        tokens.push({type: 'comment', text: sql.slice(lineCommentStart, i)});
+        continue;
+      }
+
+      if (ch === '/' && next === '*') {
+        var blockCommentStart = i;
+        i += 2;
+        while (i + 1 < sql.length && !(sql[i] === '*' && sql[i + 1] === '/')) i++;
+        i = Math.min(sql.length, i + 2);
+        tokens.push({type: 'comment', text: sql.slice(blockCommentStart, i)});
+        continue;
+      }
+
+      if (ch === '\'') {
+        var strStart = i;
+        i++;
+        while (i < sql.length) {
+          if (sql[i] === '\'' && i + 1 < sql.length && sql[i + 1] === '\'') {
+            i += 2;
+            continue;
+          }
+          if (sql[i] === '\'') {
+            i++;
+            break;
+          }
+          i++;
+        }
+        tokens.push({type: 'string', text: sql.slice(strStart, i)});
+        continue;
+      }
+
+      if (ch === '"' || ch === '`' || ch === '[') {
+        var qStart = i;
+        var qEnd = ch === '[' ? ']' : ch;
+        i++;
+        while (i < sql.length) {
+          if (sql[i] === qEnd) {
+            if ((qEnd === '"' || qEnd === '`') && i + 1 < sql.length && sql[i + 1] === qEnd) {
+              i += 2;
+              continue;
+            }
+            i++;
+            break;
+          }
+          i++;
+        }
+        tokens.push({type: 'quoted', text: sql.slice(qStart, i)});
+        continue;
+      }
+
+      if (/[A-Za-z_$]/.test(ch)) {
+        var wordStart = i;
+        i++;
+        while (i < sql.length && /[A-Za-z0-9_$]/.test(sql[i])) i++;
+        tokens.push({type: 'word', text: sql.slice(wordStart, i)});
+        continue;
+      }
+
+      if (/[0-9]/.test(ch)) {
+        var numStart = i;
+        i++;
+        while (i < sql.length && /[0-9.]/.test(sql[i])) i++;
+        tokens.push({type: 'number', text: sql.slice(numStart, i)});
+        continue;
+      }
+
+      var twoChar = ch + next;
+      if (twoChar === '>=' || twoChar === '<=' || twoChar === '<>' || twoChar === '!=' || twoChar === '||') {
+        tokens.push({type: 'symbol', text: twoChar});
+        i += 2;
+        continue;
+      }
+
+      tokens.push({type: 'symbol', text: ch});
+      i++;
+    }
+
+    return tokens;
+  }
+
+  function findClauseAt(tokens, index) {
+    var clauses = [
+      {words: ['UNION', 'ALL'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['GROUP', 'BY'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['ORDER', 'BY'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['LEFT', 'OUTER', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['RIGHT', 'OUTER', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['FULL', 'OUTER', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['INNER', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['LEFT', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['RIGHT', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['FULL', 'JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['SELECT'], clauseIndent: 0, indentAfter: 1, enterSelectList: true},
+      {words: ['FROM'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['WHERE'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['HAVING'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['LIMIT'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['OFFSET'], clauseIndent: 0, indentAfter: 1, enterSelectList: false},
+      {words: ['JOIN'], clauseIndent: 1, indentAfter: 2, enterSelectList: false},
+      {words: ['ON'], clauseIndent: 2, indentAfter: 2, enterSelectList: false},
+      {words: ['UNION'], clauseIndent: 0, indentAfter: 1, enterSelectList: false}
+    ];
+
+    for (var c = 0; c < clauses.length; c++) {
+      var clause = clauses[c];
+      var ok = true;
+      for (var j = 0; j < clause.words.length; j++) {
+        var t = tokens[index + j];
+        if (!t || t.type !== 'word' || t.text !== clause.words[j]) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return clause;
+    }
+    return null;
+  }
+
+  function shouldAddSpace(prevToken, currentToken) {
+    if (!prevToken) return false;
+    var prev = prevToken.text;
+    var cur = currentToken.text;
+
+    if (cur === ',' || cur === ')' || cur === ';' || cur === '.') return false;
+    if (prev === '(' || prev === '.') return false;
+    return true;
+  }
+
+  function formatSql(sql) {
+    var rawTokens = tokenizeSql(sql);
+    var tokens = [];
+
+    rawTokens.forEach(function (t) {
+      if (t.type === 'ws') return;
+      if (t.type === 'word') {
+        tokens.push({type: t.type, text: t.text.toUpperCase()});
+      } else {
+        tokens.push(t);
+      }
+    });
+
+    var out = '';
+    var lineStart = true;
+    var indent = 0;
+    var inSelectList = false;
+    var parenDepth = 0;
+    var prevToken = null;
+
+    function writeIndentIfNeeded() {
+      if (!lineStart) return;
+      out += new Array(indent + 1).join('  ');
+      lineStart = false;
+    }
+
+    function write(text) {
+      writeIndentIfNeeded();
+      out += text;
+    }
+
+    function newline(nextIndent) {
+      out = out.replace(/[ \t]+$/g, '');
+      if (!out.endsWith('\n')) out += '\n';
+      lineStart = true;
+      if (typeof nextIndent === 'number') indent = Math.max(0, nextIndent);
+    }
+
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+
+      if (token.type === 'comment') {
+        if (!lineStart) newline(indent);
+        write(token.text.trim());
+        newline(indent);
+        prevToken = null;
+        continue;
+      }
+
+      var clause = findClauseAt(tokens, i);
+      if (clause) {
+        if (!lineStart) newline(clause.clauseIndent);
+        else indent = clause.clauseIndent;
+
+        for (var k = 0; k < clause.words.length; k++) {
+          if (k > 0) write(' ');
+          write(clause.words[k]);
+        }
+
+        inSelectList = !!clause.enterSelectList;
+        newline(clause.indentAfter);
+        i += clause.words.length - 1;
+        prevToken = null;
+        continue;
+      }
+
+      if (token.text === '(') {
+        if (shouldAddSpace(prevToken, token)) write(' ');
+        write('(');
+        parenDepth++;
+        prevToken = token;
+        continue;
+      }
+
+      if (token.text === ')') {
+        write(')');
+        parenDepth = Math.max(0, parenDepth - 1);
+        prevToken = token;
+        continue;
+      }
+
+      if (token.text === ',') {
+        write(',');
+        if (inSelectList && parenDepth === 0) {
+          newline(indent);
+          prevToken = null;
+        } else {
+          write(' ');
+          prevToken = {text: ','};
+        }
+        continue;
+      }
+
+      if (token.text === ';') {
+        write(';');
+        newline(0);
+        inSelectList = false;
+        prevToken = null;
+        continue;
+      }
+
+      if (shouldAddSpace(prevToken, token)) write(' ');
+      write(token.text);
+      prevToken = token;
+    }
+
+    return out.trim();
+  }
+
   function uniquePush(list, value, seen) {
     if (!value || seen[value]) return;
     seen[value] = true;
@@ -628,6 +884,12 @@
         'Ctrl-Enter': function () { App.execute(); },
         'Cmd-Enter':  function () { App.execute(); },
         'Ctrl-/':     function (cm) { cm.execCommand('toggleComment'); },
+        'Ctrl-L': function () {
+          App.formatSql();
+        },
+        'Cmd-L': function () {
+          App.formatSql();
+        },
         'Ctrl-Space': function () { triggerSqlComplete(); },
         'Cmd-Space':  function () { triggerSqlComplete(); }
       },
@@ -907,6 +1169,15 @@
 
     /* ---------- Clear ---------- */
     clearEditor: function () { setSql(''); },
+
+    /* ---------- Format SQL ---------- */
+    formatSql: function () {
+      var sql = getSql();
+      if (!sql || !sql.trim()) return;
+      setSql(formatSql(sql));
+      if (editor) editor.focus();
+      setStatus('SQL reformatted');
+    },
 
     /* ---------- Export CSV ---------- */
     exportCsv: function () {
