@@ -23,10 +23,19 @@ class DbConsoleAutoConfigurationTest {
 
     @Test
     void allBeansRegistered() {
+        contextRunner
+                .withPropertyValues("db-console.enabled=true")
+                .run(ctx -> {
+                    assertThat(ctx).hasSingleBean(DataSourceRegistry.class);
+                    assertThat(ctx).hasSingleBean(DatabaseService.class);
+                    assertThat(ctx).hasSingleBean(DbConsoleController.class);
+                });
+    }
+
+    @Test
+    void disabledByDefaultWhenPropertyMissing() {
         contextRunner.run(ctx -> {
-            assertThat(ctx).hasSingleBean(DataSourceRegistry.class);
-            assertThat(ctx).hasSingleBean(DatabaseService.class);
-            assertThat(ctx).hasSingleBean(DbConsoleController.class);
+            assertThat(ctx).doesNotHaveBean(DbConsoleController.class);
         });
     }
 
@@ -42,7 +51,9 @@ class DbConsoleAutoConfigurationTest {
     @Test
     void customPathIsRespected() {
         contextRunner
-                .withPropertyValues("db-console.path=/my-console")
+                .withPropertyValues(
+                        "db-console.enabled=true",
+                        "db-console.path=/my-console")
                 .run(ctx -> {
                     assertThat(ctx).hasSingleBean(DbConsoleController.class);
                     // DbConsoleProperties should have the custom path
@@ -52,4 +63,3 @@ class DbConsoleAutoConfigurationTest {
                 });
     }
 }
-

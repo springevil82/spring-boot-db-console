@@ -23,7 +23,7 @@ import java.util.Map;
  * <ul>
  *   <li>A servlet-based web application is detected.</li>
  *   <li>At least one {@link DataSource} bean is on the classpath.</li>
- *   <li>The property {@code db-console.enabled} is not {@code false}.</li>
+ *   <li>The property {@code db-console.enabled=true} is explicitly provided.</li>
  * </ul>
  *
  * <p>The console is accessible at {@code /db-console} by default (configurable
@@ -32,7 +32,7 @@ import java.util.Map;
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass(DataSource.class)
-@ConditionalOnProperty(prefix = "db-console", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "db-console", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(DbConsoleProperties.class)
 @AutoConfigureAfter(name = {
         "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",
@@ -86,4 +86,3 @@ public class DbConsoleAutoConfiguration {
         return new DbConsoleController(databaseService, properties);
     }
 }
-
