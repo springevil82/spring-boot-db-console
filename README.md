@@ -4,7 +4,8 @@
 
 [![Java](https://img.shields.io/badge/Java-8%2B-blue)](https://openjdk.org)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.x%20%7C%203.x-brightgreen)](https://spring.io/projects/spring-boot)
-[![License](https://img.shields.io/badge/License-Apache%202.0-orange)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0%20(Free)-brightgreen)](LICENSE)
+[![Open Source](https://img.shields.io/badge/Free-Open%20Source-green)](https://github.com/db-console/spring-boot-db-console)
 
 ---
 
