@@ -21,7 +21,6 @@
 | **Context Menu**          | Right-click on tables/columns: Preview, Copy name, Show indexes                                     |
 | **Multiple DataSources**  | Switch between datasources via dropdown                                                             |
 | **Resizable panels**      | Drag to resize sidebar, editor, and results pane                                                    |
-| **Zero config**           | Works with a single Maven/Gradle dependency                                                         |
 | **Java 8 compatible**     | Compiled bytecode targets Java 8; runs on Java 8 through 25+                                        |
 | **Spring Boot 2.x & 3.x** | No `javax.servlet` imports — works on both generations                                              |
 | **Free & Open Source**    | Apache 2.0 License — fully free to use, modify, and distribute                                      |
@@ -29,6 +28,10 @@
 ---
 
 ## 🚀 Quick Start
+
+1. Add the dependency.
+2. Explicitly enable the component: `db-console.enabled=true`.
+
 
 ### Maven
 
@@ -46,6 +49,13 @@
 implementation 'io.github.db-console:spring-boot-db-console-starter:1.0.0'
 ```
 
+### Enable component
+
+```properties
+# application.properties
+db-console.enabled=true
+```
+
 That's it. Start your application and open:
 
 ```
@@ -55,26 +65,6 @@ http://localhost:8080/db-console
 ---
 
 ## 🖥️ UI Overview
-
-```
-┌─ DB Console ─────────────────────────── DataSource: dataSource ★ ─┐
-│                                                                      │
-│  ┌─ Schema Browser ─────┐  ┌─ SQL Editor ──────────────────────┐   │
-│  │ 🗂 PUBLIC            │   │  ▶ Run  ✕ Clear  Limit 100  …    │   │
-│  │  ├ 📋 users          │   │                                    │   │
-│  │  │  ├ 🔑 id INT      │   │  SELECT u.*, o.total              │   │
-│  │  │  ├ ● name VARCHAR │   │  FROM users u                     │   │
-│  │  │  └ ◌ email VARCHA │   │  JOIN orders o ON o.user_id = u.id│   │
-│  │  ├ 📋 orders         │   │  WHERE u.active = true            │   │
-│  │  └ 👁 v_active_users │   │  LIMIT 100;                       │   │
-│  └──────────────────────┘  ├────────────────────────────────────┤   │
-│                             │ ✓ 42 rows · 12ms     ↓ Export CSV │   │
-│                             │ # │ id │ name  │ email │ total    │   │
-│                             │ 1 │  1 │ Alice │ a@… │  299.00   │   │
-│                             │ 2 │  2 │ Bob   │ b@… │  149.50   │   │
-│                             └────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────┘
-```
 
 ### Keyboard Shortcuts
 
@@ -123,69 +113,6 @@ db-console.exclude-datasources=batchDataSource,quartzDataSource
 
 The console endpoint is a plain Spring MVC controller, so **Spring Security rules apply automatically**.
 
-### Permit the console path in Spring Security
-
-```java
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(auth -> auth
-        // Only allow admins to access the DB Console
-        .requestMatchers("/db-console/**").hasRole("ADMIN")
-        .anyRequest().authenticated()
-    );
-    return http.build();
-}
-```
-
-### Disable in production
-
-```properties
-# application-prod.properties
-db-console.enabled=false
-```
-
----
-
-## 🗂️ REST API Reference
-
-The console exposes a REST API that the UI uses internally. You can also call it programmatically.
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/db-console` | Serve the UI |
-| `GET` | `/db-console/api/datasources` | List all registered datasources |
-| `GET` | `/db-console/api/datasources/{name}/schemas` | List schemas/catalogs |
-| `GET` | `/db-console/api/datasources/{name}/tables?catalog=&schema=` | List tables |
-| `GET` | `/db-console/api/datasources/{name}/columns?table=&schema=` | List columns |
-| `GET` | `/db-console/api/datasources/{name}/indexes?table=&schema=` | List indexes |
-| `POST` | `/db-console/api/datasources/{name}/execute` | Execute SQL |
-| `GET` | `/db-console/api/datasources/{name}/preview?table=&limit=100` | Preview table data |
-| `POST` | `/db-console/api/datasources/{name}/export` | Export results as CSV |
-
-### Execute SQL – request body
-
-```json
-{
-  "sql": "SELECT * FROM users WHERE active = true",
-  "maxRows": 100,
-  "schema": "public",
-  "catalog": null
-}
-```
-
-### Execute SQL – response
-
-```json
-{
-  "type": "SELECT",
-  "columns": ["id", "name", "email"],
-  "rows": [[1, "Alice", "alice@example.com"], [2, "Bob", "bob@example.com"]],
-  "executionTimeMs": 12,
-  "updateCount": 0,
-  "error": null
-}
-```
-
 ---
 
 ## 🏗️ How It Works
@@ -207,7 +134,7 @@ Host Application
 **Auto-configuration conditions:**
 - Servlet web application (`@ConditionalOnWebApplication(SERVLET)`)
 - `DataSource` class present on classpath (`@ConditionalOnClass`)
-- `db-console.enabled != false` (`@ConditionalOnProperty`)
+- `db-console.enabled = true` (`@ConditionalOnProperty`)
 - Both `spring.factories` (Spring Boot 2.x) and `AutoConfiguration.imports` (Spring Boot 3.x) are registered
 
 ---
