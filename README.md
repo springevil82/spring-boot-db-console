@@ -58,13 +58,13 @@ http://localhost:8080/db-console
 ┌─ DB Console ─────────────────────────── DataSource: dataSource ★ ─┐
 │                                                                      │
 │  ┌─ Schema Browser ─────┐  ┌─ SQL Editor ──────────────────────┐   │
-│  │ 🗂 PUBLIC             │  │  ▶ Run  ✕ Clear  Limit 100  …    │   │
-│  │  ├ 📋 users           │  │                                    │   │
-│  │  │  ├ 🔑 id INT       │  │  SELECT u.*, o.total              │   │
-│  │  │  ├ ● name VARCHAR  │  │  FROM users u                     │   │
-│  │  │  └ ◌ email VARCHAR │  │  JOIN orders o ON o.user_id = u.id│   │
-│  │  ├ 📋 orders          │  │  WHERE u.active = true            │   │
-│  │  └ 👁 v_active_users  │  │  LIMIT 100;                       │   │
+│  │ 🗂 PUBLIC            │   │  ▶ Run  ✕ Clear  Limit 100  …    │   │
+│  │  ├ 📋 users          │   │                                    │   │
+│  │  │  ├ 🔑 id INT      │   │  SELECT u.*, o.total              │   │
+│  │  │  ├ ● name VARCHAR │   │  FROM users u                     │   │
+│  │  │  └ ◌ email VARCHA │   │  JOIN orders o ON o.user_id = u.id│   │
+│  │  ├ 📋 orders         │   │  WHERE u.active = true            │   │
+│  │  └ 👁 v_active_users │   │  LIMIT 100;                       │   │
 │  └──────────────────────┘  ├────────────────────────────────────┤   │
 │                             │ ✓ 42 rows · 12ms     ↓ Export CSV │   │
 │                             │ # │ id │ name  │ email │ total    │   │
@@ -97,12 +97,12 @@ http://localhost:8080/db-console
 
 ## ⚙️ Configuration
 
-All properties are optional with sensible defaults:
+The component is **disabled by default** for security. All properties are optional with sensible defaults:
 
 ```properties
 # application.properties
 
-# Disable the console entirely (e.g. in production)
+# Enable DB Console (default: false, must be explicitly set to true)
 db-console.enabled=true
 
 # Change the URL path (default: /db-console)
