@@ -820,13 +820,16 @@
     var range = getWordRange(token, cursor);
     var needle = (range.word || '').toUpperCase();
     var sqlBeforeCursor = getSqlBeforeCursor(cm);
+    var sqlAll = cm.getValue();
 
     // Alias-aware completion: after d.<Ctrl+Space> suggest columns from aliased table.
     var aliasAccessMatch = /([A-Za-z_][\w$]*)\.([A-Za-z_][\w$]*)?$/.exec(sqlBeforeCursor);
     if (aliasAccessMatch && dsState) {
       var alias = aliasAccessMatch[1];
       var memberPrefix = aliasAccessMatch[2] || '';
-      var aliases = parseAliases(sqlBeforeCursor);
+      // Parse aliases from the whole statement so completion also works in SELECT list
+      // when alias declaration appears later in FROM/JOIN.
+      var aliases = parseAliases(sqlAll);
       var aliasCols = getColumnsForAlias(alias, aliases, dsState);
       if (aliasCols.length) {
         return {

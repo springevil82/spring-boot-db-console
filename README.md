@@ -10,19 +10,19 @@
 
 ## ✨ Features
 
-| Feature | Details |
-|---|---|
-| **Auto-detection** | Finds **all** `DataSource` beans automatically — no manual configuration needed |
-| **SQL Editor** | Full CodeMirror editor with SQL syntax highlighting, Ctrl+Enter execution, selection-only execution |
-| **Schema Browser** | Collapsible tree: Catalogs → Schemas → Tables/Views → Columns (with PK/nullable markers) → Indexes |
-| **Results Grid** | Paginated table with NULL / number / boolean colouring, row count, execution time |
-| **CSV Export** | One-click export with UTF-8 BOM (Excel-compatible) |
-| **Context Menu** | Right-click on tables/columns: Preview, Copy name, Show indexes |
-| **Multiple DataSources** | Switch between datasources via dropdown |
-| **Resizable panels** | Drag to resize sidebar, editor, and results pane |
-| **Zero config** | Works with a single Maven/Gradle dependency |
-| **Java 8 compatible** | Compiled bytecode targets Java 8; runs on Java 8 through 21+ |
-| **Spring Boot 2.x & 3.x** | No `javax.servlet` imports — works on both generations |
+| Feature                   | Details                                                                                             |
+|---------------------------|-----------------------------------------------------------------------------------------------------|
+| **Auto-detection**        | Finds **all** `DataSource` beans automatically — no manual configuration needed                     |
+| **SQL Editor**            | Full CodeMirror editor with SQL syntax highlighting, execution, smart autocomplete (aliases), and SQL reformat |
+| **Schema Browser**        | Collapsible tree: Catalogs → Schemas → Tables/Views → Columns (with PK/nullable markers) → Indexes  |
+| **Results Grid**          | Paginated table with NULL / number / boolean colouring, row count, execution time                   |
+| **CSV Export**            | One-click export with UTF-8 BOM (Excel-compatible)                                                  |
+| **Context Menu**          | Right-click on tables/columns: Preview, Copy name, Show indexes                                     |
+| **Multiple DataSources**  | Switch between datasources via dropdown                                                             |
+| **Resizable panels**      | Drag to resize sidebar, editor, and results pane                                                    |
+| **Zero config**           | Works with a single Maven/Gradle dependency                                                         |
+| **Java 8 compatible**     | Compiled bytecode targets Java 8; runs on Java 8 through 25+                                        |
+| **Spring Boot 2.x & 3.x** | No `javax.servlet` imports — works on both generations                                              |
 
 ---
 
@@ -80,6 +80,8 @@ http://localhost:8080/db-console
 |---|---|
 | `Ctrl+Enter` / `Cmd+Enter` | Execute query (or selected text) |
 | `Ctrl+/` | Toggle line comment |
+| `Ctrl+Space` / `Cmd+Space` | Show SQL autocomplete suggestions (tables/columns/aliases) |
+| `Ctrl+L` / `Cmd+L` | Reformat SQL and uppercase tokens (except string literals) |
 
 ### Mouse Interactions
 
