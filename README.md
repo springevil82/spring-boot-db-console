@@ -29,11 +29,7 @@
 
 ## 🚀 Quick Start
 
-1. Add the dependency.
-2. Explicitly enable the component: `db-console.enabled=true`.
-
-
-### Maven
+### Add the dependency
 
 ```xml
 <dependency>
@@ -43,7 +39,7 @@
 </dependency>
 ```
 
-### Gradle
+or
 
 ```groovy
 implementation 'io.github.db-console:spring-boot-db-console-starter:1.0.0'
