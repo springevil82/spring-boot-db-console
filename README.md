@@ -23,6 +23,7 @@
 | **Zero config**           | Works with a single Maven/Gradle dependency                                                         |
 | **Java 8 compatible**     | Compiled bytecode targets Java 8; runs on Java 8 through 25+                                        |
 | **Spring Boot 2.x & 3.x** | No `javax.servlet` imports — works on both generations                                              |
+| **Free & Open Source**    | Apache 2.0 License — fully free to use, modify, and distribute                                      |
 
 ---
 
@@ -224,4 +225,6 @@ mvn test
 
 ## 📄 License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+**Apache License 2.0** — Free and open-source software.  
+You are free to use, modify, and distribute this software without restrictions.  
+See [LICENSE](LICENSE) for full terms.
