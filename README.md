@@ -1,2 +1,4 @@
 # spring-boot-db-console
-UI for inspecting database for springboot datasources
+
+Built-in UI for inspecting database for spring-boot projects
+
