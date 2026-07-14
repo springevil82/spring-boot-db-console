@@ -320,13 +320,196 @@
     datasources: [],
     currentDs: null,
     lastResult: null,
-    expandedNodes: {}   // key → true
+    expandedNodes: {},   // key → true
+    completionByDs: {}   // dsName -> { loaded, loading, keywords, tables, columns, qualifiedTables, qualifiedColumns }
   };
 
   /* ═══════════════════════════════════════════════════════════
    *  CodeMirror setup
    * ═══════════════════════════════════════════════════════════ */
   var editor = null;
+
+  var SQL_KEYWORDS = [
+    'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+    'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM', 'MERGE',
+    'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'FULL JOIN', 'ON',
+    'CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'TRUNCATE TABLE',
+    'CREATE INDEX', 'DROP INDEX', 'PRIMARY KEY', 'FOREIGN KEY',
+    'DISTINCT', 'AS', 'AND', 'OR', 'NOT', 'IN', 'EXISTS', 'BETWEEN', 'LIKE', 'IS NULL',
+    'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'UNION', 'UNION ALL',
+    'COUNT', 'SUM', 'AVG', 'MIN', 'MAX'
+  ];
+
+  function getCompletionState(dsName) {
+    if (!dsName) return null;
+    if (!state.completionByDs[dsName]) {
+      state.completionByDs[dsName] = {
+        loaded: false,
+        loading: false,
+        keywords: SQL_KEYWORDS.slice(),
+        tables: [],
+        columns: [],
+        qualifiedTables: [],
+        qualifiedColumns: []
+      };
+    }
+    return state.completionByDs[dsName];
+  }
+
+  function uniquePush(list, value, seen) {
+    if (!value || seen[value]) return;
+    seen[value] = true;
+    list.push(value);
+  }
+
+  function fetchAutocompleteMetadata(dsName) {
+    var dsState = getCompletionState(dsName);
+    if (!dsState || dsState.loaded || dsState.loading) return Promise.resolve(dsState);
+
+    dsState.loading = true;
+
+    return api.get('/api/datasources/' + encodeURIComponent(dsName) + '/schemas')
+      .then(function (schemasMap) {
+        var tableCalls = [];
+        Object.keys(schemasMap || {}).forEach(function (catalog) {
+          var schemas = schemasMap[catalog] || [];
+          var catalogValue = (catalog === 'null' || catalog === null || catalog === '') ? null : catalog;
+
+          if (!schemas.length) {
+            var paramsNoSchema = [];
+            if (catalogValue) paramsNoSchema.push('catalog=' + encodeURIComponent(catalogValue));
+            var qsNoSchema = paramsNoSchema.length ? '?' + paramsNoSchema.join('&') : '';
+            tableCalls.push(
+              api.get('/api/datasources/' + encodeURIComponent(dsName) + '/tables' + qsNoSchema)
+                .then(function (tables) {
+                  return { catalog: catalogValue, schema: null, tables: tables || [] };
+                })
+            );
+            return;
+          }
+
+          schemas.forEach(function (schema) {
+            var params = [];
+            if (catalogValue) params.push('catalog=' + encodeURIComponent(catalogValue));
+            if (schema) params.push('schema=' + encodeURIComponent(schema));
+            var qs = params.length ? '?' + params.join('&') : '';
+            tableCalls.push(
+              api.get('/api/datasources/' + encodeURIComponent(dsName) + '/tables' + qs)
+                .then(function (tables) {
+                  return { catalog: catalogValue, schema: schema || null, tables: tables || [] };
+                })
+            );
+          });
+        });
+        return Promise.all(tableCalls);
+      })
+      .then(function (tableGroups) {
+        var tableSeen = {};
+        var qualifiedTableSeen = {};
+        var columnSeen = {};
+        var qualifiedColumnSeen = {};
+        var columnCalls = [];
+
+        (tableGroups || []).forEach(function (group) {
+          (group.tables || []).forEach(function (t) {
+            uniquePush(dsState.tables, t.name, tableSeen);
+
+            var schemaPrefix = group.schema ? group.schema + '.' : '';
+            uniquePush(dsState.qualifiedTables, schemaPrefix + t.name, qualifiedTableSeen);
+
+            var colParams = [];
+            if (group.catalog) colParams.push('catalog=' + encodeURIComponent(group.catalog));
+            if (group.schema) colParams.push('schema=' + encodeURIComponent(group.schema));
+            colParams.push('table=' + encodeURIComponent(t.name));
+
+            columnCalls.push(
+              api.get('/api/datasources/' + encodeURIComponent(dsName) + '/columns?' + colParams.join('&'))
+                .then(function (cols) {
+                  (cols || []).forEach(function (c) {
+                    uniquePush(dsState.columns, c.name, columnSeen);
+                    uniquePush(dsState.qualifiedColumns, t.name + '.' + c.name, qualifiedColumnSeen);
+                    if (group.schema) {
+                      uniquePush(dsState.qualifiedColumns, group.schema + '.' + t.name + '.' + c.name, qualifiedColumnSeen);
+                    }
+                  });
+                })
+            );
+          });
+        });
+
+        return Promise.all(columnCalls);
+      })
+      .then(function () {
+        dsState.loaded = true;
+        dsState.loading = false;
+        return dsState;
+      })
+      .catch(function () {
+        dsState.loading = false;
+        return dsState;
+      });
+  }
+
+  function getWordRange(token, cursor) {
+    var text = token && token.string ? token.string : '';
+    var start = token ? token.start : cursor.ch;
+    var end = token ? token.end : cursor.ch;
+    var isWord = /^[\w.$"]+$/.test(text);
+    if (!isWord) {
+      start = cursor.ch;
+      end = cursor.ch;
+      text = '';
+    }
+    return { start: start, end: end, word: text };
+  }
+
+  function sqlComplete(cm) {
+    var dsState = getCompletionState(state.currentDs);
+    var cursor = cm.getCursor();
+    var token = cm.getTokenAt(cursor);
+    var range = getWordRange(token, cursor);
+    var needle = (range.word || '').toUpperCase();
+
+    var pool = [];
+    if (dsState) {
+      pool = dsState.keywords
+        .concat(dsState.tables)
+        .concat(dsState.qualifiedTables)
+        .concat(dsState.columns)
+        .concat(dsState.qualifiedColumns);
+    } else {
+      pool = SQL_KEYWORDS.slice();
+    }
+
+    var seen = {};
+    var list = [];
+    pool.forEach(function (item) {
+      if (!item) return;
+      var key = item.toUpperCase();
+      if (seen[key]) return;
+      if (!needle || key.indexOf(needle) === 0) {
+        seen[key] = true;
+        list.push(item);
+      }
+    });
+
+    list.sort(function (a, b) {
+      return a.localeCompare(b);
+    });
+
+    return {
+      list: list,
+      from: CodeMirror.Pos(cursor.line, range.start),
+      to: CodeMirror.Pos(cursor.line, range.end)
+    };
+  }
+
+  function triggerSqlComplete() {
+    if (!editor || typeof CodeMirror === 'undefined') return;
+    fetchAutocompleteMetadata(state.currentDs).finally(function () {
+      editor.showHint({ hint: sqlComplete, completeSingle: false });
+    });
+  }
 
   function initEditor() {
     var el = document.getElementById('editor');
@@ -347,9 +530,18 @@
       extraKeys: {
         'Ctrl-Enter': function () { App.execute(); },
         'Cmd-Enter':  function () { App.execute(); },
-        'Ctrl-/':     function (cm) { cm.execCommand('toggleComment'); }
+        'Ctrl-/':     function (cm) { cm.execCommand('toggleComment'); },
+        'Ctrl-Space': function () { triggerSqlComplete(); },
+        'Cmd-Space':  function () { triggerSqlComplete(); }
       },
-      hintOptions: { tables: {} }
+      hintOptions: { completeSingle: false }
+    });
+    editor.on('inputRead', function (cm, change) {
+      if (!change || !change.text || !change.text.length) return;
+      var ch = change.text[0];
+      if (/^[a-zA-Z_.]$/.test(ch)) {
+        cm.showHint({ hint: sqlComplete, completeSingle: false });
+      }
     });
     editor.setSize('100%', '100%');
   }
@@ -409,6 +601,7 @@
 
     selectDatasource: function (name) {
       state.currentDs = name;
+      fetchAutocompleteMetadata(name);
       var ds = state.datasources.find(function (d) { return d.name === name; });
       if (ds) {
         var badge = document.getElementById('ds-badge');
@@ -1016,4 +1209,3 @@
 </script>
 </body>
 </html>
-
