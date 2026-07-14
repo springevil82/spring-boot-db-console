@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.db-console</groupId>
+    <groupId>io.github.springevil82</groupId>
     <artifactId>spring-boot-db-console-starter</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -14,7 +14,7 @@
         Auto-configuring Spring Boot starter that exposes an embedded database UI console
         (similar to pgAdmin / DBeaver) for every DataSource found in the application context.
     </description>
-    <url>https://github.com/db-console/spring-boot-db-console</url>
+    <url>https://github.com/springevil82/spring-boot-db-console</url>
 
     <licenses>
         <license>
