@@ -1,6 +1,7 @@
 # 🗄️ Spring Boot DB Console Starter
 
-> An embedded, zero-config database UI console for Spring Boot applications — like pgAdmin or DBeaver, available at a single HTTP endpoint.
+> An embedded, zero-configuration database UI console for Spring Boot applications. It provides a built-in web UI for
+> inspecting databases and running SQL against the data sources exposed by your Spring Boot app.
 
 [![Java](https://img.shields.io/badge/Java-8%2B-blue)](https://openjdk.org)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.x%20%7C%203.x-brightgreen)](https://spring.io/projects/spring-boot)

@@ -11,8 +11,9 @@
 
     <name>Spring Boot DB Console Starter</name>
     <description>
-        Auto-configuring Spring Boot starter that exposes an embedded database UI console
-        (similar to pgAdmin / DBeaver) for every DataSource found in the application context.
+        An embedded, zero-configuration database UI console for Spring Boot applications.
+        It provides a built-in web UI for inspecting databases and running SQL against the
+        data sources exposed by your Spring Boot app.
     </description>
     <url>https://github.com/springevil82/spring-boot-db-console</url>
 
