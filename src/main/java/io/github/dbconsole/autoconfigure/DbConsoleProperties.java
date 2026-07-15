@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <pre>
  * # application.properties / application.yml
- * db-console.enabled=false         # default: false (must be explicitly true to enable)
+ * db-console.enabled=true          # default: true (set false to disable)
  * db-console.path=/db-console      # default: /db-console
  * db-console.max-rows=500          # default: 500  (hard cap for SELECT results)
  * db-console.exclude-datasources=  # comma-separated bean names to skip
@@ -18,8 +18,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "db-console")
 public class DbConsoleProperties {
 
-    /** Set to {@code true} to explicitly enable the console endpoint. */
-    private boolean enabled = false;
+    /**
+     * Set to {@code false} to disable the console endpoint.
+     */
+    private boolean enabled = true;
 
     /** URL path prefix for all DB Console endpoints. Must start with '/'. */
     private String path = "/db-console";

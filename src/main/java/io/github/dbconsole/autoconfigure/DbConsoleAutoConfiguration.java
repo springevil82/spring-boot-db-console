@@ -1,20 +1,24 @@
 package io.github.dbconsole.autoconfigure;
 
-import io.github.dbconsole.controller.DbConsoleController;
-import io.github.dbconsole.service.DataSourceRegistry;
-import io.github.dbconsole.service.DatabaseService;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.condition.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.sql.DataSource;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import io.github.dbconsole.controller.DbConsoleController;
+import io.github.dbconsole.service.DataSourceRegistry;
+import io.github.dbconsole.service.DatabaseService;
 
 /**
  * Spring Boot auto-configuration for the DB Console starter.
@@ -23,7 +27,7 @@ import java.util.Map;
  * <ul>
  *   <li>A servlet-based web application is detected.</li>
  *   <li>At least one {@link DataSource} bean is on the classpath.</li>
- *   <li>The property {@code db-console.enabled=true} is explicitly provided.</li>
+ *   <li>The property {@code db-console.enabled} is missing or set to {@code true}.</li>
  * </ul>
  *
  * <p>The console is accessible at {@code /db-console} by default (configurable
@@ -32,7 +36,7 @@ import java.util.Map;
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass(DataSource.class)
-@ConditionalOnProperty(prefix = "db-console", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "db-console", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DbConsoleProperties.class)
 @AutoConfigureAfter(name = {
         "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration",

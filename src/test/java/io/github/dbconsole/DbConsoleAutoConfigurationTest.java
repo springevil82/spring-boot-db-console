@@ -1,15 +1,16 @@
 package io.github.dbconsole;
 
-import io.github.dbconsole.autoconfigure.DbConsoleAutoConfiguration;
-import io.github.dbconsole.controller.DbConsoleController;
-import io.github.dbconsole.service.DataSourceRegistry;
-import io.github.dbconsole.service.DatabaseService;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.github.dbconsole.autoconfigure.DbConsoleAutoConfiguration;
+import io.github.dbconsole.controller.DbConsoleController;
+import io.github.dbconsole.service.DataSourceRegistry;
+import io.github.dbconsole.service.DatabaseService;
 
 class DbConsoleAutoConfigurationTest {
 
@@ -22,20 +23,11 @@ class DbConsoleAutoConfigurationTest {
                     "spring.datasource.driver-class-name=org.h2.Driver");
 
     @Test
-    void allBeansRegistered() {
-        contextRunner
-                .withPropertyValues("db-console.enabled=true")
-                .run(ctx -> {
-                    assertThat(ctx).hasSingleBean(DataSourceRegistry.class);
-                    assertThat(ctx).hasSingleBean(DatabaseService.class);
-                    assertThat(ctx).hasSingleBean(DbConsoleController.class);
-                });
-    }
-
-    @Test
-    void disabledByDefaultWhenPropertyMissing() {
+    void allBeansRegisteredByDefault() {
         contextRunner.run(ctx -> {
-            assertThat(ctx).doesNotHaveBean(DbConsoleController.class);
+            assertThat(ctx).hasSingleBean(DataSourceRegistry.class);
+            assertThat(ctx).hasSingleBean(DatabaseService.class);
+            assertThat(ctx).hasSingleBean(DbConsoleController.class);
         });
     }
 
@@ -49,10 +41,16 @@ class DbConsoleAutoConfigurationTest {
     }
 
     @Test
+    void enabledByDefaultWhenPropertyMissing() {
+        contextRunner.run(ctx -> {
+            assertThat(ctx).hasSingleBean(DbConsoleController.class);
+        });
+    }
+
+    @Test
     void customPathIsRespected() {
         contextRunner
                 .withPropertyValues(
-                        "db-console.enabled=true",
                         "db-console.path=/my-console")
                 .run(ctx -> {
                     assertThat(ctx).hasSingleBean(DbConsoleController.class);

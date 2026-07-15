@@ -44,17 +44,26 @@ or
 implementation 'io.github.springevil82:spring-boot-db-console-starter:1.0.0'
 ```
 
-### Enable component
-
-```properties
-# application.properties
-db-console.enabled=true
-```
-
 That's it. Start your application and open:
 
 ```
 http://localhost:8080/db-console
+```
+
+### Disabling component for PROD (optional)
+
+```yaml
+# application.properties
+db-console:
+  enabled: false
+```
+
+### Bypassing Spring Security (optional)
+
+```yaml
+application:
+  security:
+    bypass-urls: /health-check,/error,/swagger-ui/**,/v3/api-docs/**,/db-console/**
 ```
 
 ---
@@ -84,13 +93,12 @@ http://localhost:8080/db-console
 
 ## ⚙️ Configuration
 
-The component is **disabled by default** for security. All properties are optional with sensible defaults:
+The component is **enabled by default**. All properties are optional with sensible defaults:
 
 ```properties
 # application.properties
-
-# Enable DB Console (default: false, must be explicitly set to true)
-db-console.enabled=true
+# Disable DB Console explicitly (default: true)
+db-console.enabled=false
 
 # Change the URL path (default: /db-console)
 db-console.path=/db-console
@@ -129,7 +137,7 @@ Host Application
 **Auto-configuration conditions:**
 - Servlet web application (`@ConditionalOnWebApplication(SERVLET)`)
 - `DataSource` class present on classpath (`@ConditionalOnClass`)
-- `db-console.enabled = true` (`@ConditionalOnProperty`)
+- `db-console.enabled` missing or not `false` (`@ConditionalOnProperty`)
 - Both `spring.factories` (Spring Boot 2.x) and `AutoConfiguration.imports` (Spring Boot 3.x) are registered
 
 ---
