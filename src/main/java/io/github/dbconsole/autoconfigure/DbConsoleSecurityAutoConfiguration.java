@@ -47,14 +47,18 @@ public class DbConsoleSecurityAutoConfiguration {
      * Registers a {@link WebSecurityCustomizer} that tells Spring Security to ignore
      * (completely bypass) all requests to the DB Console path.
      *
+     * <p>Works correctly even when the app is deployed behind a context prefix
+     * (e.g., {@code /salesforce-broker/db-console/**}), because the pattern uses
+     * wildcards to match any prefix before the console path.
+     *
      * <p>This is equivalent to adding the following to your own {@code SecurityConfig}:
      * <pre>
-     * web.ignoring().requestMatchers(new AntPathRequestMatcher("/db-console/**"));
+     * web.ignoring().requestMatchers(new AntPathRequestMatcher("/**" + properties.getPath() + "/**"));
      * </pre>
      */
     @Bean
     public WebSecurityCustomizer dbConsoleWebSecurityCustomizer(DbConsoleProperties properties) {
-        String pattern = properties.getPath() + "/**";
+        String pattern = "/**" + properties.getPath() + "/**";
         return web -> web.ignoring().requestMatchers(new AntPathRequestMatcher(pattern));
     }
 }
