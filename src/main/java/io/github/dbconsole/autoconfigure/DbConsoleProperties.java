@@ -9,10 +9,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <pre>
  * # application.properties / application.yml
- * db-console.enabled=true          # default: true (set false to disable)
- * db-console.path=/db-console      # default: /db-console
- * db-console.max-rows=500          # default: 500  (hard cap for SELECT results)
- * db-console.exclude-datasources=  # comma-separated bean names to skip
+ * db-console.enabled=true                   # default: true  (set false to disable)
+ * db-console.path=/db-console               # default: /db-console
+ * db-console.max-rows=500                   # default: 500   (hard cap for SELECT results)
+ * db-console.exclude-datasources=           # comma-separated bean names to skip
+ * db-console.websecurity.enabled=true       # default: true  (set false to bypass Spring Security)
  * </pre>
  */
 @ConfigurationProperties(prefix = "db-console")
@@ -35,6 +36,9 @@ public class DbConsoleProperties {
      */
     private java.util.List<String> excludeDatasources = new java.util.ArrayList<>();
 
+    /** Spring Security settings for the DB Console endpoints. */
+    private WebSecurity websecurity = new WebSecurity();
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
@@ -53,5 +57,27 @@ public class DbConsoleProperties {
     public java.util.List<String> getExcludeDatasources() { return excludeDatasources; }
     public void setExcludeDatasources(java.util.List<String> excludeDatasources) {
         this.excludeDatasources = excludeDatasources;
+    }
+
+    public WebSecurity getWebsecurity() { return websecurity; }
+    public void setWebsecurity(WebSecurity websecurity) { this.websecurity = websecurity; }
+
+    /**
+     * Spring Security settings for the DB Console endpoints.
+     */
+    public static class WebSecurity {
+
+        /**
+         * When set to {@code false}, Spring Security is bypassed for all DB Console
+         * endpoints ({@code path/**}).  Useful during development or when the console
+         * is protected at the network/proxy level instead.
+         *
+         * <p>Requires {@code spring-security-config} on the classpath; has no effect
+         * otherwise.
+         */
+        private boolean enabled = true;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
     }
 }

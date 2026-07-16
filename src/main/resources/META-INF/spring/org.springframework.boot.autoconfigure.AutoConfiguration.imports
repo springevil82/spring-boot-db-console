@@ -1,2 +1,3 @@
 io.github.dbconsole.autoconfigure.DbConsoleAutoConfiguration
+io.github.dbconsole.autoconfigure.DbConsoleSecurityAutoConfiguration
 

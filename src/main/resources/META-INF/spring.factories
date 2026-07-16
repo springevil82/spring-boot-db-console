@@ -1,3 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  io.github.dbconsole.autoconfigure.DbConsoleAutoConfiguration
+  io.github.dbconsole.autoconfigure.DbConsoleAutoConfiguration,\
+  io.github.dbconsole.autoconfigure.DbConsoleSecurityAutoConfiguration
 
