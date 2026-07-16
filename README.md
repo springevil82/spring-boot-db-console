@@ -35,14 +35,14 @@
 <dependency>
     <groupId>io.github.springevil82</groupId>
     <artifactId>spring-boot-db-console-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 
 or
 
 ```groovy
-implementation 'io.github.springevil82:spring-boot-db-console-starter:1.0.0'
+implementation 'io.github.springevil82:spring-boot-db-console-starter:1.0.2'
 ```
 
 That's it. Start your application and open:

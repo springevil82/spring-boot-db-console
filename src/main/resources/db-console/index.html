@@ -289,7 +289,18 @@
 (function () {
   'use strict';
 
-  var BASE = '__BASE_PATH__';
+  var SERVER_BASE = '__BASE_PATH__';
+
+  function resolveBasePath() {
+    var path = (window.location && window.location.pathname) ? window.location.pathname : '';
+    if (!path || path === '__BASE_PATH__') path = SERVER_BASE;
+    if (!path || path === '__BASE_PATH__') path = '/db-console';
+    path = String(path).replace(/\/index\.html$/, '');
+    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    return path;
+  }
+
+  var BASE = resolveBasePath();
 
   /* ═══════════════════════════════════════════════════════════
    *  API helpers
