@@ -42,7 +42,7 @@
 or
 
 ```groovy
-implementation 'io.github.springevil82:spring-boot-db-console-starter:1.0.4'
+implementation 'io.github.springevil82:spring-boot-db-console-starter:1.0.3'
 ```
 
 That's it. Start your application and open:

@@ -6,7 +6,7 @@
 
     <groupId>io.github.springevil82</groupId>
     <artifactId>spring-boot-db-console-starter</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>Spring Boot DB Console Starter</name>
