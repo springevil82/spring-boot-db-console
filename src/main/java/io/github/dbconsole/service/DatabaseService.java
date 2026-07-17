@@ -1,12 +1,31 @@
 package io.github.dbconsole.service;
 
-import io.github.dbconsole.model.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
-import java.sql.*;
-import java.util.*;
+import io.github.dbconsole.model.ColumnInfo;
+import io.github.dbconsole.model.DataSourceInfo;
+import io.github.dbconsole.model.IndexInfo;
+import io.github.dbconsole.model.QueryRequest;
+import io.github.dbconsole.model.QueryResult;
+import io.github.dbconsole.model.TableInfo;
 
 /**
  * Core service that talks to the database via JDBC metadata and statement execution.
@@ -81,6 +100,11 @@ public class DatabaseService {
                     } catch (SQLException ex) {
                         catalog = null;
                     }
+
+                    if (catalog == null) {
+                        catalog = "default";
+                    }
+
                     result.computeIfAbsent(catalog, k -> new ArrayList<>()).add(schema);
                 }
             }
@@ -90,6 +114,11 @@ public class DatabaseService {
                 try (ResultSet rs = meta.getCatalogs()) {
                     while (rs.next()) {
                         String catalog = rs.getString("TABLE_CAT");
+
+                        if (catalog == null) {
+                            catalog = "default";
+                        }
+
                         result.put(catalog, Collections.<String>emptyList());
                     }
                 }
