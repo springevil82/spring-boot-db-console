@@ -109,9 +109,6 @@ db-console.max-rows=500
 
 # Exclude specific DataSource beans (e.g. Spring Batch internal datasource)
 db-console.exclude-datasources=batchDataSource,quartzDataSource
-
-# Bypass Spring Security for all DB Console endpoints (default: true = security ON)
-db-console.websecurity.enabled=false
 ```
 
 ---
@@ -120,25 +117,7 @@ db-console.websecurity.enabled=false
 
 The console endpoint is a plain Spring MVC controller, so **Spring Security rules apply automatically**.
 
-### Option A — Bypass via built-in property (simplest)
-
-Set `db-console.websecurity.enabled=false` and the starter registers a `WebSecurityCustomizer`
-that tells Spring Security to ignore all requests to `<path>/**`:
-
-```yaml
-# application.yml
-db-console:
-  websecurity:
-    enabled: false
-```
-
-This is equivalent to adding the following to your own `SecurityConfig`:
-
-```java
-web.ignoring().requestMatchers(new AntPathRequestMatcher("/db-console/**"));
-```
-
-### Option B — Manual rule in your own SecurityConfig
+### Option A — Manual rule in your own SecurityConfig
 
 **Spring Boot 2.x (Security 5)**
 
@@ -163,7 +142,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 }
 ```
 
-### Option C — Exclude from Security entirely (Spring Boot 2.x)
+### Option B — Exclude from Security entirely (Spring Boot 2.x)
 
 ```java
 @Override
